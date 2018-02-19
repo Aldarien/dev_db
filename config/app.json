@@ -1,0 +1,13 @@
+{
+    "databases": {
+        "source": {
+            "name": "incoviba"
+        },
+        "destination": {
+            "name": "dev_incoviba"
+        }
+    },
+    "directories": {
+        "temp": "D:\\temp"
+    }
+}
