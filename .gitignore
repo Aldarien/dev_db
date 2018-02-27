@@ -1,3 +1,9 @@
 # LiClipse IDE
 .project
 .pydevproject
+
+__pycache__
+
+build
+
+*.lock
