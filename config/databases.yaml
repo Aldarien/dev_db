@@ -1,0 +1,10 @@
+source:
+    name: incoviba
+    host: localhost
+    username: incoviba
+    password: 5GQYFvRjVw2A4KcD
+destination:
+    name: dev_incoviba
+    host: localhost
+    username: incoviba
+    password: 5GQYFvRjVw2A4KcD
