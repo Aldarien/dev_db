@@ -1,0 +1,53 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "simple": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        },
+        "screen": {
+            "format": "%(asctime)s - %(message)s"
+        }
+    },
+    "filters": {
+        "error_filter": {
+            "()": "filters.level.LevelFilter",
+            "low": "ERROR"
+        },
+        "debug_filter": {
+            "()": "filters.level.LevelFilter",
+            "low": "DEBUG"
+        }
+    },
+    "handlers": {
+        "file_handler": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "ERROR",
+            "formatter": "simple",
+            "filename": "log/error.log",
+            "encoding": "utf8",
+            "maxBytes": 5120,
+            "backupCount": 30,
+            "filters": ["error_filter"]
+        },
+        "debug_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+            "filename": "log/debug.log",
+            "encoding": "utf8",
+            "filters": ["debug_filter"]
+        },
+        "print_handler": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "screen",
+            "stream": "sys.stdout"
+        }
+    },
+ 
+    "root": {
+        "level": "ERROR",
+        "handlers": ["file_handler", "debug_handler", "print_handler"]
+    }
+}

@@ -1,34 +1,39 @@
-import argparse, logging
+import argparse, logging, json, logging.config
 
 from aconfig import config
 from src.db import db
+from filters.level import LevelFilter
 
 def main(args={}):
-    if args.time:
-        print('Starting to migrate ' + config('databases.source.name') + ' into ' + config('databases.destination.name'))
-    t = db()
-    if args.time:
-        print('Finished in {:.2f} seconds'.format(t))
-    if args.log:
-        file = 'devdb.log'
-        if 'log-file' in args:
-            file = args.log-file
-        logger = logging.getLogger('DevDB')
-        hdlr = logging.FileHandler(file)
-        formatter = logging.Formatter('[%(asctime)s] %(message)s')
-        hdlr.setFormatter(formatter)
-        logger.addHandler(hdlr)
-        logger.setLevel(logging.INFO)
-        logger.info('Starting to migrate {} into {}'.format(config('databases.source.name'), config('databases.destination.name')))
+    logger = logging.getLogger('DevDB.main')
+    logger.info('Starting to migrate {} into {}'.format(config('databases.source.name'), config('databases.destination.name')))
+    logger.debug('{} and {} are set in config/databases.yml file'.format(config('databases.source.name'), config('databases.destination.name')))
+    
+    try:
+        t = db()
         logger.info('Finished in {:.2f} seconds'.format(t))
+    except Exception as e:
+        logger.error(e)
     
 if __name__ == '__main__':
     # Define arguments
     parser = argparse.ArgumentParser('Copy mysql databases.')
     parser.add_argument('-t', '--time', help='Show time spent.', action='store_true')
-    parser.add_argument('-l', '--log', help='Log output to file.', action='store_true')
-    parser.add_argument('-f', '--log-file', help='Set log file. Default: devdb.log')
+    parser.add_argument('-l', '--log', help='Log debug output to file.', action='store_true')
     args = parser.parse_args()
+    
+    with open("logging.json", 'r') as logging_configuration_file:
+        config_dict = json.load(logging_configuration_file)
+
+    logging.config.dictConfig(config_dict)
+    
+    logger = logging.getLogger('DevDB')
+    if args.time:
+        logger.setLevel(logging.INFO)
+    if args.log:
+        logger.setLevel(logging.DEBUG)
+    
+    logger.info('Started logging')
     
     # Run main script
     main(args)

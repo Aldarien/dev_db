@@ -1,0 +1,5 @@
+2018-02-27 13:38:36,627 - DevDB.main - ERROR - 'str' object has no attribute 'config'
+2018-02-27 13:38:54,443 - DevDB.main - ERROR - 'str' object has no attribute 'config'
+2018-02-27 13:41:15,397 - DevDB.main - ERROR - 'str' object has no attribute 'config'
+2018-02-27 13:41:55,943 - DevDB.main - ERROR - name 'json' is not defined
+2018-02-27 13:42:14,223 - DevDB.main - ERROR - Object of type 'date' is not JSON serializable

@@ -1,4 +1,4 @@
-import pymysql, time
+import pymysql, time, logging, json
 
 from aconfig import config
 
@@ -11,7 +11,10 @@ Gets all tables from source with the data and copies everything to destination a
 4. Create tables and insert data
 '''
 
+logger = logging.getLogger('DevDB.db.connect')
+
 def connect(database):
+    logger.debug('Connecting to {}'.format(config('databases.' + database + '.name')))
     connection = pymysql.connect(host=config('databases.' + database + '.host'),
                              user=config('databases.' + database + '.username'),
                              password=config('databases.' + database + '.password'),
@@ -21,6 +24,7 @@ def connect(database):
     return connection
 
 def getTables(connection):
+    logger.debug('Getting tables')
     query = "SHOW TABLES"
     
     with connection.cursor() as cursor:
@@ -30,6 +34,7 @@ def getTables(connection):
             yield row
 
 def getCreation(connection, table):
+    logger.debug('Getting creation of {}'.format(table))
     query = "SHOW CREATE TABLE " + table
     
     with connection.cursor() as cursor:
@@ -37,6 +42,7 @@ def getCreation(connection, table):
         return cursor.fetchone()
     
 def getData(connection, table):
+    logger.debug('Getting data from {}'.format(table))
     query = "SELECT * FROM " + table
     
     with connection.cursor() as cursor:
@@ -46,6 +52,7 @@ def getData(connection, table):
             yield row
     
 def emptyDatabase(connection, database):
+    logger.debug('Emptying database {}'.format(config('databases.' + database + '.name')))
     for table in getTables(connection):
         query = "DROP TABLE " + table['Tables_in_' + config('databases.' + database + '.name')]
     
@@ -53,15 +60,18 @@ def emptyDatabase(connection, database):
         cursor.execute(query)
     
 def createTable(connection, table, creation):
+    logger.debug('Creating table {}'.format(table))
     query = creation.replace('CREATE TABLE', 'CREATE TABLE IF NOT EXISTS')
     
     cursor = connection.cursor()
     cursor.execute(creation)
         
 def insertData(connection, table, data):
+    logger.debug('Inserting data into {}'.format(table))
     query = "INSERT INTO " + table + " VALUES ("
-    for item in data:
+    for item, value in data.items():
         query += '%(' + item + ')s, '
+        logger.debug('({}: {})'.format(item, value))
     query = query[:-2]
     query += ')'
     
