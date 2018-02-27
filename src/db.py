@@ -1,95 +1,102 @@
-import pymysql
+import pymysql, time
 
-class DB:
-    host=''
-    username=''
-    password=''
-    name=''
-    connection=None
+from aconfig import config
+
+'''
+Gets all tables from source with the data and copies everything to destination after clearing it
+
+1. Get all tables from source
+2. Get all data for each table
+3. Clear destination
+4. Create tables and insert data
+'''
+
+def connect(database):
+    connection = pymysql.connect(host=config('databases.' + database + '.host'),
+                             user=config('databases.' + database + '.username'),
+                             password=config('databases.' + database + '.password'),
+                             db=config('databases.' + database + '.name'),
+                             charset='utf8',
+                             cursorclass=pymysql.cursors.DictCursor)
+    return connection
+
+def getTables(connection):
+    query = "SHOW TABLES"
     
-    def __init__(self, host='', username='', password='', name=''):
-        self.host = host
-        self.username = username
-        self.password = password
-        self.name = name
-    def connect(self):
-        self.connection = pymysql.connect(host=self.host, user=self.username, password=self.password, db=self.name, charset='utf8', cursorclass=pymysql.cursors.DictCursor)
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        for row in results:
+            yield row
+
+def getCreation(connection, table):
+    query = "SHOW CREATE TABLE " + table
     
-    def tables(self):
-        try:
-            self.connect()
-            with self.connection.cursor() as cursor:
-                sql = "SHOW TABLES"
-                cursor.execute(sql)
-                results = cursor.fetchall()
-                for r in results:
-                    for k, t in r.items():
-                        yield t
-        except Exception as e:
-            print(e)
-        finally:
-            try:
-                self.connection.close()
-            except:
-                ''
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        return cursor.fetchone()
     
-    def schema(self, table):
-        try:
-            self.connect()
-            with self.connection.cursor() as cursor:
-                sql = "DESCRIBE " + table
-                cursor.execute(sql)
-                results = cursor.fetchall()
-                for r in results:
-                    yield r
-        except Exception as e:
-            print(e)
-        finally:
-            try:
-                self.connection.close()
-            except:
-                ''
-                
-    def hasTable(self, table):
-        try:
-            self.connect()
-            with self.connection.cursor() as cursor:
-                sql = "SHOW TABLES LIKE '" + table + "'"
-                r = cursor.execute(sql)
-                if r > 0:
-                    return True
-                return False
-        except Exception as e:
-            print(e)
-            return False
-        finally:
-            try:
-                self.connection.close()
-            except:
-                ''
+def getData(connection, table):
+    query = "SELECT * FROM " + table
     
-    def tableHasColumn(self, table, column):
-        try:
-            self.connect()
-            with self.connection.cursor() as cursor:
-                sql = "SHOW COLUMNS FROM `" + table + "` LIKE %s"
-                r = cursor.execute(sql, (column))
-                if r > 0:
-                    return True
-                return False
-        except Exception as e:
-            print(e)
-            return False
-        finally:
-            try:
-                self.connection.close()
-            except:
-                ''
-                
-    def createTable(self, table, source_gen):
-        output = "CREATE TABLE " + table + '('
-        for column in source_gen:
-            output += column['Field'] + ' ' + column['Type']
-            if column['Null'] == 'NO':
-                output += ' NOT NULL'
-            if column['Key'] == ''
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        for row in results:
+            yield row
+    
+def emptyDatabase(connection, database):
+    for table in getTables(connection):
+        query = "DROP TABLE " + table['Tables_in_' + config('databases.' + database + '.name')]
+    
+        cursor = connection.cursor()
+        cursor.execute(query)
+    
+def createTable(connection, table, creation):
+    query = creation.replace('CREATE TABLE', 'CREATE TABLE IF NOT EXISTS')
+    
+    cursor = connection.cursor()
+    cursor.execute(creation)
+        
+def insertData(connection, table, data):
+    query = "INSERT INTO " + table + " VALUES ("
+    for item in data:
+        query += '%(' + item + ')s, '
+    query = query[:-2]
+    query += ')'
+    
+    cursor = connection.cursor()
+    cursor.execute(query, data)
+    
+def db():
+    start = time.time()
+    in_database = 'source'
+    out_database = 'destination'
+    in_connection = connect(in_database)
+    out_connection = connect(out_database)
+        
+    try:
+        query = "SET FOREIGN_KEY_CHECKS=0"
+        with out_connection.cursor() as cursor:
+            cursor.execute(query)
+        
+        emptyDatabase(out_connection, out_database)
+        
+        for table in getTables(in_connection):
+            table = table['Tables_in_' + config('databases.' + in_database + '.name')]
+            creation = getCreation(in_connection, table)['Create Table']
+            createTable(out_connection, table, creation)
+            for data in getData(in_connection, table):
+                insertData(out_connection, table, data)
+        
+        out_connection.commit()
+        
+        query = "SET FOREIGN_KEY_CHECKS=1"
+        with out_connection.cursor() as cursor:
+            cursor.execute(query)
+    finally:
+        in_connection.close()
+        out_connection.close()
+
+    end = time.time()
+    return end - start
